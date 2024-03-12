@@ -163,8 +163,8 @@ void RemapOALGlobalFunctions(void)
   g_pOemGlobal->pfnWriteDebugByte = OEMWriteDebugByte; //?
   g_pOemGlobal->pfnWriteDebugString = OEMWriteDebugString; //?
   g_pOemGlobal->pfnReadDebugByte = OEMReadDebugByte; //?
-  //g_pOemGlobal->pfnQueryPerfCounter = OEMQueryPerformanceCounter;
-  //g_pOemGlobal->pfnQueryPerfFreq = OEMQueryPerformanceFrequency;
+  g_pOemGlobal->pfnQueryPerfCounter = OEMQueryPerformanceCounter;
+  g_pOemGlobal->pfnQueryPerfFreq = OEMQueryPerformanceFrequency;
   g_pOemGlobal->pfnUpdateReschedTime = OEMUpdateReschedTime;
   //g_pOemGlobal->pfnEnumExtensionDRAM = OEMEnumExtensionDRAM; //?
   //g_pOemGlobal->pfnCalcFSPages = OEMCalcFSPages;
@@ -178,7 +178,7 @@ void RemapOALGlobalFunctions(void)
   //g_pOemGlobal->pfnMpCpuPowerFunc = OEMMpCpuPowerFunc;
   //g_pOemGlobal->pfnIpiHandler = OEMIpiHandler;
   g_pOemGlobal->pfnSendIpi = OEMSendIPI;
-  //g_pOemGlobal->pfnIdleEx = OEMIdleEx;
+  g_pOemGlobal->pfnIdleEx = OEMIdleEx;
   //g_pOemGlobal->pfnInitInterlockedFunc = OEMInitInterlockedFunctions;
 
   // Set the KITL entry point.  This is already set by default to
@@ -249,7 +249,7 @@ void RemapOALGlobalFunctions(void)
   g_pOemGlobal->p__security_cookie_complement = &__security_cookie_complement;
 
   // Specifies the alarm resolution in ms
-  //g_pOemGlobal->dwAlarmResolution = DEFAULT_ALARMRESOLUTION_MSEC;
+  g_pOemGlobal->dwAlarmResolution = 1000;
 
   // Specifies number of years for RTC rollover
   //g_pOemGlobal->dwYearsRTCRollover  = 0;
@@ -302,6 +302,7 @@ void RemapOALGlobalFunctions(void)
   // Specifies cache bits for page tables in Translation Table Base
   // Register (TTBR) if page table is cacheable (inner/outer)
   g_pOemGlobal->dwTTBRCacheBits = 0x8;            // TTBR RGN set to 0b01 - outer write back, write-allocate
+
+  idleconv = 1;
+  CEProcessorType = PROCESSOR_ARM_CORTEX;
 }
-
-

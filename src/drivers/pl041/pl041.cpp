@@ -50,6 +50,7 @@ struct device_state
 	DWORD fifo_size;
 	BOOL in_use;
 	DWORD set_rate;
+	BOOL is_paravirt;
 
 	DWORD play_state;
 	DWORD volume;
@@ -73,6 +74,10 @@ enum pl041_regs
 	AACI_PERIPHID3 = 0xFEC,
 
 	LM_DAC_RATE = 0x2C,
+	LM_MASTER_VOLUME = 0x02,
+
+	VIRT_ADDR = 0x110,
+	VIRT_SIZE = 0x114
 };
 
 MMRESULT private_WaveGetDevCaps(WAPI_INOUT apidir, PVOID pCaps, UINT wSize)
@@ -106,10 +111,8 @@ VOID private_WaveStart (WAPI_INOUT apidir, PWAVEHDR pwh)
 	mmio_write32(state.io_base + AACI_IE1, (1 << 2)); // fifo half
 }
 
-VOID private_WaveContinue(WAPI_INOUT apidir, PWAVEHDR pwh)
+void ContinueReg(PWAVEHDR pwh)
 {
-    DEBUGMSG(ZONE_PDD, (TEXT("pl041: WaveContinue %x\r\n"), (DWORD)pwh));
-
 	DWORD buf_samples = pwh->dwBufferLength / 4;
 	DWORD buf_pos = pwh->dwBytesRecorded / 4;
 
@@ -117,7 +120,7 @@ VOID private_WaveContinue(WAPI_INOUT apidir, PWAVEHDR pwh)
 	if (max_transfer - buf_pos > state.fifo_size / 2)
 		max_transfer = buf_pos + state.fifo_size / 2;
 
-	int vol = state.volume >> 16;
+	int vol = (DWORD)state.volume & 0xffff;
 	DWORD *samples = (DWORD*)pwh->lpData;
 	for (DWORD i = buf_pos; i < max_transfer; i++) {
 		short chan1 = samples[i] & 0xFFFF;
@@ -129,6 +132,40 @@ VOID private_WaveContinue(WAPI_INOUT apidir, PWAVEHDR pwh)
 	}
 
 	pwh->dwBytesRecorded = max_transfer * 4;
+}
+
+#define PFN_SHIFT 0
+#define PAGE_SIZE 0x1000
+#define PAGE_MASK ~(PAGE_SIZE - 1)
+
+void ContinueParavirt(PWAVEHDR pwh)
+{
+	DWORD pfn;
+	char *data_ptr = (char*)pwh->lpData + pwh->dwBytesRecorded;
+	char *data_pg = (char*)((DWORD)data_ptr & PAGE_MASK);
+	char *data_nextpg = data_pg + PAGE_SIZE;
+
+	DWORD page_left = data_nextpg - data_ptr;
+	DWORD data_left = pwh->dwBufferLength - pwh->dwBytesRecorded;
+	DWORD samples_available = min(page_left, data_left) / 4;
+
+	LockPages(data_pg, PAGE_SIZE, &pfn, LOCKFLAG_READ);
+	DWORD phys_addr = (pfn << PFN_SHIFT) | (data_ptr - data_pg);
+	mmio_write32(state.io_base + VIRT_ADDR, phys_addr);
+	mmio_write32(state.io_base + VIRT_SIZE, samples_available);
+	UnlockPages(data_pg, PAGE_SIZE);
+
+	pwh->dwBytesRecorded += mmio_read32(state.io_base + VIRT_SIZE) * 4;
+}
+
+VOID private_WaveContinue(WAPI_INOUT apidir, PWAVEHDR pwh)
+{
+    DEBUGMSG(ZONE_PDD, (TEXT("pl041: WaveContinue %x\r\n"), (DWORD)pwh));
+
+	if (!state.is_paravirt)
+		ContinueReg(pwh);
+	else
+		ContinueParavirt(pwh);
 
 	mmio_write32(state.io_base + AACI_IE1, (1 << 2)); // fifo half
 }
@@ -225,9 +262,20 @@ AUDIO_STATE PDD_AudioGetInterruptType(VOID)
 
 BOOL RegGetValue(const WCHAR* ActiveKey, const WCHAR* pwsName, PDWORD pdwValue);
 
+static void UpdateVolume()
+{
+	if (!state.is_paravirt)
+		return;
+
+	DWORD l = (state.volume >> 16) >> 10;
+	DWORD r = (state.volume & 0xFFFF) >> 10;
+	DWORD reg = (l << 8) | r;
+	mmio_write32(state.io_base + AACI_SL2TX, reg << 4);
+	mmio_write32(state.io_base + AACI_SL1TX, LM_MASTER_VOLUME << 12);
+}
+
 BOOL PDD_AudioInitialize(DWORD dwIndex)
 {
-	//dpCurSettings.ulZoneMask = (1 << 14) | (1 << 15) | (1 << 6);
 	DEBUGMSG(ZONE_PDD, (TEXT("pl041: AudioInit\r\n")));
 
 	if (!RegGetValue((LPWSTR)dwIndex, TEXT("IoBase"), &state.io_base)) {
@@ -240,10 +288,13 @@ BOOL PDD_AudioInitialize(DWORD dwIndex)
 		return FALSE;
 	}
 
-	state.volume = 0xFFFFFFFF;
+	state.volume = 0x99999999;
 
 	mmio_write32(state.io_base + AACI_MAINCR, (1 << 0));
 	mmio_write32(state.io_base + AACI_TXCR1, (1 << 16) | (1 << 15) | (1 << 3) | (1 << 0)); // TxFen, TxCompact, SLOT3, TxEn
+
+	DWORD virt = mmio_read32(state.io_base + VIRT_ADDR);
+	state.is_paravirt = (virt == 0x56495254);
 
 	DWORD info = mmio_read32(state.io_base + AACI_PERIPHID3);
 	DEBUGMSG(ZONE_PDD, (TEXT("pl041: PERIPHID3: %x\r\n"), info));
@@ -257,6 +308,8 @@ BOOL PDD_AudioInitialize(DWORD dwIndex)
 		case 6: state.fifo_size = 512; break;
 		case 7: state.fifo_size = 1024; break;
 	}
+
+	UpdateVolume();
 
     return TRUE;
 }
@@ -328,6 +381,7 @@ MMRESULT PDD_WaveProc(WAPI_INOUT apidir, DWORD dwCode, DWORD dwParam1, DWORD dwP
 
     case WPDM_SETVOLUME:
 		state.volume = dwParam1;
+		UpdateVolume();
 		return MMSYSERR_NOERROR;
 
     case WPDM_SETMIXERVAL:

@@ -15,6 +15,55 @@
 #include <nkexport.h>
 #include "mmio.h"
 
+struct civil_date
+{
+	int y;
+	unsigned int m;
+	unsigned int d;
+};
+
+int days_from_civil(struct civil_date t)
+{
+	int y = t.y;
+	unsigned int m = t.m, d = t.d;
+
+	int era;
+	unsigned int yoe, doy, doe;
+
+    y -= m <= 2;
+    era = (y >= 0 ? y : y-399) / 400;
+    yoe = (unsigned int)(y - era * 400);
+    doy = (153*(m > 2 ? m-3 : m+9) + 2)/5 + d-1;
+    doe = yoe * 365 + yoe/4 - yoe/100 + doy;
+    return era * 146097 + (int)doe - 719468;
+}
+
+struct civil_date civil_from_days(int z)
+{
+	int era, y;
+	unsigned int doe, yoe, doy, mp, d, m;
+	struct civil_date out;
+
+	z += 719468;
+    era = (z >= 0 ? z : z - 146096) / 146097;
+    doe = (unsigned int)(z - era * 146097);
+    yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+    y = (int)yoe + era * 400;
+    doy = doe - (365*yoe + yoe/4 - yoe/100);
+    mp = (5*doy + 2)/153;
+    d = doy - (153*mp+2)/5 + 1;
+    m = mp < 10 ? mp+3 : mp-9;
+	out.y = y + (m <= 2);
+	out.m = m;
+	out.d = d;
+    return out;
+}
+
+unsigned int weekday_from_days(int z)
+{
+	return (unsigned int)(z >= -4 ? (z+4) % 7 : (z+5) % 7 + 6);
+}
+
 // ---------------------------------------------------------------------------
 // OEMGetRealTime: REQUIRED
 //
@@ -25,54 +74,34 @@
 BOOL OEMGetRealTime(LPSYSTEMTIME lpst)
 {
 	DWORD timestamp = mmio_read(RTC_BASE + RTCDR);
-	DWORD days_count[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-	DWORD mdays;
-	DWORD isleap;
-	DWORD yearsecs;
+	DWORD days = timestamp / 86400;
+	DWORD seconds = timestamp % 86400;
+	struct civil_date out = civil_from_days(days);
 
-	memset(lpst, 0, sizeof(SYSTEMTIME));
-	lpst->wYear = 1970;
+	lpst->wYear = out.y;
+	lpst->wMonth = out.m;
+	lpst->wDay = out.d;
+	lpst->wDayOfWeek = weekday_from_days(days);
 
-	while (1) {
-		isleap = ((lpst->wYear % 4) == 0 && ((lpst->wYear % 100) != 0 || (lpst->wYear % 400) == 0));
-		yearsecs = 86400 * (365 + isleap);
-		if (timestamp >= yearsecs) {
-			timestamp -= yearsecs;
-			lpst->wYear++;
-		} else
-			break;
-	}
-
-	while (timestamp >= 86400) {
-		timestamp -= 86400;
-
-		lpst->wDay++;
-
-		mdays = days_count[lpst->wMonth];
-		if (lpst->wMonth == 1 && isleap)
-			mdays++;
-
-		if (lpst->wDay == mdays) {
-			lpst->wDay = 0;
-			lpst->wMonth++;
-		}
-
-		if (lpst->wMonth == 12) {
-			lpst->wMonth = 0;
-			lpst->wYear++;
-		}
-	}
-	
-	lpst->wMonth++;
-	lpst->wDay++;
-
-	lpst->wHour = timestamp / 3600;
-	lpst->wMinute = (timestamp % 3600) / 60;
-	lpst->wSecond = (timestamp % 3600) % 60;
-
-	//DEBUGMSG(1, (TEXT("OEMGetRealTime %u-%u-%u %u %u:%u:%u\r\n"), lpst->wYear, lpst->wMonth, lpst->wDay, lpst->wDayOfWeek, lpst->wHour, lpst->wMinute, lpst->wSecond));
+	lpst->wHour = (WORD)(seconds / 3600);
+	lpst->wMinute = (seconds % 3600) / 60;
+	lpst->wSecond = (seconds % 3600) % 60;
+	lpst->wMilliseconds = 0;
 
 	return TRUE;
+}
+
+DWORD convert_date(LPSYSTEMTIME lpst)
+{
+	struct civil_date t;
+	int days;
+
+	t.y = lpst->wYear;
+	t.m = lpst->wMonth;
+	t.d = lpst->wDay;
+	days = days_from_civil(t);
+
+	return days * 86400 + lpst->wHour * 3600 + lpst->wMinute * 60 + lpst->wSecond;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,10 +111,10 @@ BOOL OEMGetRealTime(LPSYSTEMTIME lpst)
 //
 BOOL OEMSetRealTime(LPSYSTEMTIME lpst)
 {
-  // Fill in timer code here.
-	DEBUGMSG(1, (TEXT("OEMSetRealTime\r\n")));
+	DWORD timestamp = convert_date(lpst);
+	mmio_write(RTC_BASE + RTCLR, timestamp);
 
-  return TRUE;
+	return TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,11 +124,14 @@ BOOL OEMSetRealTime(LPSYSTEMTIME lpst)
 //
 BOOL OEMSetAlarmTime(LPSYSTEMTIME lpst)
 {
-  // Fill in timer code here.
-	DEBUGMSG(1, (TEXT("OEMSetAlarmTime\r\n")));
+	DWORD timestamp = convert_date(lpst);
+	mmio_write(RTC_BASE + RTCMR, timestamp);
+	mmio_write(RTC_BASE + RTCIMSC, 1);
 
-  return TRUE;
+	return TRUE;
 }
+
+uint32_t update_timer(void);
 
 // ---------------------------------------------------------------------------
 // OEMQueryPerformanceCounter: OPTIONAL
@@ -113,10 +145,12 @@ BOOL OEMSetAlarmTime(LPSYSTEMTIME lpst)
 //
 BOOL OEMQueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount)
 {
-  // Fill in high-resolution timer code here.
-	DEBUGMSG(1, (TEXT("OEM_QPC\r\n")));
+	unsigned long long us = update_timer();
+	unsigned long long msec = CurMSec;
 
-  return TRUE;
+	lpPerformanceCount->QuadPart = msec * 1000 + us;
+
+	return TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,10 +165,9 @@ BOOL OEMQueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount)
 //
 BOOL OEMQueryPerformanceFrequency(LARGE_INTEGER* lpFrequency)
 {
-  // Fill in high-resolution timer frequency code here.
-	DEBUGMSG(1, (TEXT("OEM_QFC\r\n")));
+	lpFrequency->QuadPart = 1000000;
 
-  return TRUE;
+	return TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +184,6 @@ BOOL OEMQueryPerformanceFrequency(LARGE_INTEGER* lpFrequency)
 //
 DWORD OEMGetTickCount(void)
 {
-	//DEBUGMSG(1, (TEXT("OEMGetTickCount %u\r\n"), CurMSec));
 	return CurMSec;
 }
 
@@ -165,14 +197,11 @@ DWORD OEMGetTickCount(void)
 // possible if dwTick has already passed.  It must save any information
 // necessary to calculate the g_pNKGlobal->dwCurMSec variable correctly.
 //
-uint32_t update_timer(void);
+
 VOID OEMUpdateReschedTime(DWORD dwTick)
 {
 	DWORD interval = 1;
-	DWORD i, z, us;
-
-	//for (i = 0; i < 50000; i++)
-	//	z = mmio_read(SP804_BASE + TimerValue);
+	DWORD us;
 
 	us = update_timer();
 	//DEBUGMSG(1, (TEXT("OEMUpdateReschedTime %u, %u\r\n"), CurMSec, dwTick));
@@ -192,10 +221,5 @@ VOID OEMUpdateReschedTime(DWORD dwTick)
 //
 void OEMRefreshWatchDog(void)
 {
-  // Fill in watchdog code here.
-	DEBUGMSG(1, (TEXT("OEMRefreshWatchDog\r\n")));
-
-  return;
+	return;
 }
-
-

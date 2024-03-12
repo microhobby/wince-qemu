@@ -151,6 +151,7 @@ extern "C" BOOL TouchPanelEnableEx(
 
 	ist_thread = CreateThread(NULL, 0, UpdateThread, NULL, CREATE_SUSPENDED, NULL);
 	CeSetThreadAffinity(ist_thread, 1);
+	CeSetThreadPriority(ist_thread, 215);
 	ResumeThread(ist_thread);
 
 	return TRUE;

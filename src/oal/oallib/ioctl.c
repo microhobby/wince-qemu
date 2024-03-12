@@ -19,13 +19,15 @@
 void lcd_config(int width, int height)
 {
 	mmio_write(LCD_BASE + LCDTiming0, (width / 16 - 1) << 2);
-	mmio_write(LCD_BASE + LCDTiming1, height + 1);
+	mmio_write(LCD_BASE + LCDTiming1, height - 1);
 	mmio_write(LCD_BASE + LCDUpbase, VRAM_ADDR);
-	mmio_write(LCD_BASE + LCDControl, (1 << 11) | (1 << 0) | (5 << 1));
+	mmio_write(LCD_BASE + LCDControl, (1 << 11) | (1 << 8) | (1 << 0) | (5 << 1));
 }
 
 LPCWSTR platformtype_str = L"Pocket PC";
 LPCWSTR platformoem_str = L"QEMU vexpress-a15";
+LPCSTR deviceid_str = "QEMU_CE\0CE_QEMU";
+BYTE uuid_data[] = { 0x14, 0x86, 0xec, 0xe5, 0x02, 0x7a, 0x4b, 0x7a, 0xb4, 0xe5, 0x73, 0xb3, 0x70, 0x77, 0x15, 0xd7 };
 PLATFORMVERSION platformversion[] = {{7, 0}};
 
 // ---------------------------------------------------------------------------
@@ -47,7 +49,6 @@ BOOL OEMIoControl(
 	DDHAL_MODE_INFO *mode;
 	DEVICE_ID *device_id;
 	PROCESSOR_INFO *proc_info;
-	DWORD i;
 
 	switch (dwIoControlCode)
 	{
@@ -65,14 +66,14 @@ BOOL OEMIoControl(
 	case IOCTL_HAL_GET_HWENTROPY:
 	case IOCTL_HAL_GET_FAST_COUNTER:
 	case IOCTL_HAL_GET_FAST_COUNTER_INFO:
-		NKSetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+		NKSetLastError(ERROR_NOT_SUPPORTED);
 		return FALSE;
 	case IOCTL_HAL_GET_DEVICE_INFO:
 		if (nInBufSize < 4) {
 			NKSetLastError(ERROR_BAD_ARGUMENTS);
 			return FALSE;
 		}
-		if (*inDword == SPI_GETPLATFORMTYPE) {
+		if (*inDword == SPI_GETPLATFORMTYPE || *inDword == SPI_GETPLATFORMNAME) {
 			bytes_copied = (wcslen(platformtype_str) + 1) * 2;
 			if (lpBytesReturned)
 				*lpBytesReturned = bytes_copied;
@@ -81,7 +82,7 @@ BOOL OEMIoControl(
 				return FALSE;
 			}
 			memcpy(lpOutBuf, platformtype_str, bytes_copied);
-		} else if (*inDword == SPI_GETOEMINFO) {
+		} else if (*inDword == SPI_GETOEMINFO || *inDword == SPI_GETPROJECTNAME || *inDword == SPI_GETBOOTMENAME) {
 			bytes_copied = (wcslen(platformoem_str) + 1) * 2;
 			if (lpBytesReturned)
 				*lpBytesReturned = bytes_copied;
@@ -99,24 +100,49 @@ BOOL OEMIoControl(
 				return FALSE;
 			}
 			memcpy(lpOutBuf, platformversion, bytes_copied);
-		}
-		else {
-			NKSetLastError(ERROR_BAD_ARGUMENTS);
+		} else if (*inDword == SPI_GETUUID || *inDword == SPI_GETGUIDPATTERN) {
+			bytes_copied = 16;
+			if (lpBytesReturned)
+				*lpBytesReturned = bytes_copied;
+			if (nOutBufSize < bytes_copied) {
+				NKSetLastError(ERROR_INSUFFICIENT_BUFFER);
+				return FALSE;
+			}
+			memcpy(lpOutBuf, uuid_data, 16);
+		} else {
+			NKSetLastError(ERROR_NOT_SUPPORTED);
 			return FALSE;
 		}
 		return TRUE;
 	case IOCTL_HAL_GET_DEVICEID:
+		if (nOutBufSize == 16) {
+			if (lpBytesReturned)
+				*lpBytesReturned = 16;
+			memcpy(lpOutBuf, deviceid_str, 16);
+			return TRUE;
+		}
 		if (lpBytesReturned)
-			*lpBytesReturned = sizeof(DEVICE_ID);
-		if (nOutBufSize < sizeof(DEVICE_ID)) {
+			*lpBytesReturned = sizeof(DEVICE_ID) + 16;
+		if (nOutBufSize < sizeof(DEVICE_ID) + 16) {
 			NKSetLastError(ERROR_INSUFFICIENT_BUFFER);
 			return FALSE;
 		}
 		device_id = (DEVICE_ID*)lpOutBuf;
-		for (i = 0; i < device_id->dwPresetIDBytes; i++)
-			*(BYTE*)((uint32_t)lpOutBuf + device_id->dwPresetIDOffset + i) = 0x01;
-		for (i = 0; i < device_id->dwPlatformIDBytes; i++)
-			*(BYTE*)((uint32_t)lpOutBuf + device_id->dwPlatformIDOffset + i) = 0x02;
+		device_id->dwSize = sizeof(DEVICE_ID) + 16;
+		device_id->dwPresetIDOffset = sizeof(DEVICE_ID);
+		device_id->dwPresetIDBytes = 8;
+		device_id->dwPlatformIDOffset = sizeof(DEVICE_ID) + 8;
+		device_id->dwPlatformIDBytes = 8;
+		memcpy(device_id + 1, deviceid_str, 16);
+		return TRUE;
+	case IOCTL_HAL_GET_UUID:
+		if (lpBytesReturned)
+			*lpBytesReturned = 16;
+		if (nOutBufSize < 16) {
+			NKSetLastError(ERROR_INSUFFICIENT_BUFFER);
+			return FALSE;
+		}
+		memcpy(lpOutBuf, uuid_data, 16);
 		return TRUE;
 	case IOCTL_PROCESSOR_INFORMATION:
 		if (lpBytesReturned)
@@ -126,6 +152,7 @@ BOOL OEMIoControl(
 			return FALSE;
 		}
 		proc_info = (PROCESSOR_INFO*)lpOutBuf;
+		memset(proc_info, 0, sizeof(PROCESSOR_INFO));
 		proc_info->wVersion = 1;
 		proc_info->szProcessCore[0] = L'A';
 		proc_info->szProcessCore[1] = L'R';
@@ -137,15 +164,13 @@ BOOL OEMIoControl(
 		proc_info->szProcessorName[2] = L'5';
 		proc_info->szProcessorName[3] = 0;
 		proc_info->wProcessorRevision = 1;
-		proc_info->szCatalogNumber[0] = L'X';
-		proc_info->szCatalogNumber[1] = 0;
 		proc_info->szVendor[0] = L'Q';
 		proc_info->szVendor[1] = L'E';
 		proc_info->szVendor[2] = L'M';
 		proc_info->szVendor[3] = L'U';
 		proc_info->szVendor[4] = 0;
 		proc_info->dwInstructionSet = PROCESSOR_FLOATINGPOINT;
-		proc_info->dwClockSpeed = 100000000;
+		proc_info->dwClockSpeed = 500000000;
 		return TRUE;
 	case IOCTL_HAL_QUERY_DISPLAYSETTINGS:
 		if (lpBytesReturned)
@@ -200,7 +225,7 @@ BOOL OEMIoControl(
 			mode->phFrameBase = VRAM_ADDR;
 			mode->frameSize = 1024 * 4 * 600;
 			mode->frameStride = 1024 * 4;
-			mode->paletteMode = PAL_RGB;
+			mode->paletteMode = PAL_BGR;
 			mode->entries = 0;
 			return TRUE;
 		}
@@ -228,7 +253,7 @@ BOOL OEMIoControl(
 	}
 
 	DEBUGMSG(1, (TEXT("OEMIoControl: unknown function %u\r\n"), function));
-	NKSetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+	NKSetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 

@@ -108,7 +108,7 @@ void OEMInterruptMask(DWORD dwSysIntr, BOOL fDisable)
 uint32_t timeUS;
 uint32_t lastTimer;
 
-uint32_t update_timer(void)
+uint32_t update_timer()
 {
 	uint32_t msec;
 	uint32_t timer = mmio_read(SP804_BASE + TimerValue);

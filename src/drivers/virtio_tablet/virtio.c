@@ -252,14 +252,15 @@ struct input_state
 {
 	int32_t x;
 	int32_t y;
+	int32_t button;
 };
 
 struct input_state input_buf;
 
 void process_event(struct virtio_input_event *ev)
 {
-	//mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_TOUCH, (long long)input_buf.x * 1024 / (32768 / 4), (long long)input_buf.y * 600 / (32768 / 4), 0, 0);
-
+	// mouse device:
+#if 1
 	if (ev->type == EV_SYN) {
 		if (ev->code == SYN_REPORT)
 			mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE, input_buf.x * 2, input_buf.y * 2, 0, 0);
@@ -287,6 +288,28 @@ void process_event(struct virtio_input_event *ev)
 		if (ev->code == REL_WHEEL)
 			mouse_event(MOUSEEVENTF_WHEEL, 0, 0, ev->value * WHEEL_DELTA, 0);
 	}
+#else
+	// touch device:
+	DWORD dx = (long long)input_buf.x * 1024 / (32768 / 4);
+	DWORD dy = (long long)input_buf.y * 600 / (32768 / 4);
+
+	if (ev->type == EV_SYN) {
+		if (ev->code == SYN_REPORT && input_buf.button != 0)
+			mouse_event(MOUSEEVENTF_TOUCH | MOUSEEVENTF_MOVE, dx, dy, 0, 0);
+	} else if (ev->type == EV_ABS) {
+		if (ev->code == ABS_X)
+			input_buf.x = ev->value;
+		if (ev->code == ABS_Y)
+			input_buf.y = ev->value;
+	} else if (ev->type == EV_KEY) {
+		if (ev->code == BTN_LEFT)
+			input_buf.button = ev->value;
+		if (ev->code == BTN_LEFT && ev->value == 0)
+			mouse_event(MOUSEEVENTF_TOUCH | MOUSEEVENTF_LEFTUP, dx, dy, 0, 0);
+		if (ev->code == BTN_LEFT && ev->value == 1)
+			mouse_event(MOUSEEVENTF_TOUCH | MOUSEEVENTF_LEFTDOWN, dx, dy, 0, 0);
+	}
+#endif
 }
 
 void populate_buffers(struct virtio_cfg *cfg)

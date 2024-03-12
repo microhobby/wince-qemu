@@ -23,6 +23,8 @@
 #define mmio_write(reg, data)  *(volatile uint32_t*)(reg) = (data)
 #define mmio_read(reg)  *(volatile uint32_t*)(reg)
 
+#define vol_dword(v) (*(volatile uint32_t*)(&(v)))
+
 enum pl011_regs
 {
 	UART_DR     = 0x00,
@@ -74,15 +76,113 @@ extern "C" BOOL WINAPI DllMain(
   return TRUE;
 }
 
+#define BUF_SIZE 2048
+
 struct port_state
 {
 	DWORD io_base;
 	DWORD sysintr;
-	BOOL is_open;
+	BOOL is_dev_open;
+
 	HANDLE interrupt;
+	HANDLE waitev;
 	HANDLE breakev;
+	HANDLE abortev;
 	COMMTIMEOUTS timeouts;
+	DWORD waitmask;
+
+	HANDLE ist_thread;
+	char *buffer;
+	DWORD readpos;
+	volatile DWORD writepos;
 };
+
+DWORD UpdateThread(void *arg)
+{
+	port_state *state = (port_state*)arg;
+
+	int bufpos = 0;
+
+	while (1) {
+		HANDLE handles[] = { state->interrupt, state->breakev };
+		DWORD wait = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
+		if (wait == WAIT_OBJECT_0 + 1)
+			return 0;
+
+		while ((mmio_read(state->io_base + UART_FR) & (1 << 4)) == 0) {
+			state->buffer[bufpos++] = (BYTE)mmio_read(state->io_base + UART_DR);
+			if (bufpos == BUF_SIZE)
+				bufpos = 0;
+		}
+
+		vol_dword(state->writepos) = bufpos;
+
+		SetEvent(state->waitev);
+		InterruptDone(state->sysintr);
+	}
+}
+
+void OpenPort(port_state *state)
+{
+	if (state->is_dev_open) {
+		DEBUGMSG(ZONE_WARN, (TEXT("pl011: already open\r\n")));
+		return;
+	}
+
+	mmio_write(state->io_base + UART_IMSC, (1 << 4));
+	mmio_write(state->io_base + UART_CR, (1 << 0) | (1 << 8) | (1 << 9));
+
+	state->interrupt = CreateEvent(NULL, FALSE, FALSE, NULL);
+	state->waitev = CreateEvent(NULL, FALSE, FALSE, NULL);
+	state->breakev = CreateEvent(NULL, TRUE, FALSE, NULL);
+	state->abortev = CreateEvent(NULL, TRUE, FALSE, NULL);
+
+	if (!InterruptInitialize(state->sysintr, state->interrupt, NULL, 0)) {
+		DEBUGMSG(ZONE_ERROR, (TEXT("pl011: InterruptInitialize failed\r\n")));
+		CloseHandle(state->interrupt);
+		CloseHandle(state->waitev);
+		CloseHandle(state->breakev);
+		CloseHandle(state->abortev);
+		return;
+	}
+
+	state->buffer = (char*)LocalAlloc(LMEM_FIXED, BUF_SIZE);
+	state->readpos = 0;
+	state->writepos = 0;
+	state->ist_thread = CreateThread(NULL, 0, UpdateThread, state, CREATE_SUSPENDED, NULL);
+	CeSetThreadAffinity(state->ist_thread, 1);
+	CeSetThreadPriority(state->ist_thread, 220);
+	ResumeThread(state->ist_thread);
+
+	state->is_dev_open = TRUE;
+}
+
+void ClosePort(port_state *state)
+{
+	if (!state->is_dev_open) {
+		DEBUGMSG(ZONE_INFO, (TEXT("pl011: not open!\r\n")));
+		return;
+	}
+
+	mmio_write(state->io_base + UART_IMSC, 0);
+	mmio_write(state->io_base + UART_CR, 0);
+
+	SetEvent(state->breakev);
+	SetEvent(state->abortev);
+
+	WaitForSingleObject(state->ist_thread, INFINITE);
+	if (WaitForSingleObject(state->interrupt, 0) != WAIT_TIMEOUT)
+		InterruptDone(state->sysintr);
+
+	InterruptDisable(state->sysintr);
+	CloseHandle(state->ist_thread);
+	CloseHandle(state->interrupt);
+	CloseHandle(state->waitev);
+	CloseHandle(state->breakev);
+	CloseHandle(state->abortev);
+	LocalFree(state->buffer);
+	state->is_dev_open = FALSE;
+}
 
 // ---------------------------------------------------------------------------
 // COM_Init: REQUIRED
@@ -100,8 +200,7 @@ extern "C" DWORD COM_Init(LPCTSTR pContext)
 
 	DEBUGMSG(ZONE_INFO, (TEXT("COM_Init: %u\r\n"), (DWORD)state));
 
-	state->is_open = FALSE;
-	memset(&state->timeouts, 0, sizeof(COMMTIMEOUTS));
+	memset(state, 0, sizeof(port_state));
 
 	if (!RegGetValue(pContext, TEXT("IoBase"), &state->io_base)) {
 		delete state;
@@ -121,7 +220,6 @@ extern "C" DWORD COM_Init(LPCTSTR pContext)
 	return (DWORD)state;
 }
 
-extern "C" BOOL COM_Close(DWORD hOpenContext);
 // ---------------------------------------------------------------------------
 // COM_Deinit: REQUIRED
 //
@@ -132,10 +230,8 @@ extern "C" BOOL COM_Deinit(DWORD hDeviceContext)
 {
 	port_state *state = (port_state*)hDeviceContext;
 
-	if (state->is_open) {
-		DEBUGMSG(ZONE_WARN, (TEXT("pl011: opened during deinit!\r\n")));
-		COM_Close(hDeviceContext);
-	}
+	if (state->is_dev_open)
+		ClosePort(state);
 
 	DEBUGMSG(ZONE_INFO, (TEXT("COM_Deinit: %u\r\n"), hDeviceContext));
 	delete state;
@@ -169,26 +265,7 @@ extern "C" DWORD COM_Open(
 	port_state *state = (port_state*)hDeviceContext;
 
 	DEBUGMSG(ZONE_INFO, (TEXT("COM_Open: %u\r\n"), hDeviceContext));
-
-	if (state->is_open) {
-		DEBUGMSG(ZONE_WARN, (TEXT("COM_Open: already open\r\n")));
-		return NULL;
-	}
-
-	mmio_write(state->io_base + UART_IMSC, (1 << 4));
-	mmio_write(state->io_base + UART_CR, (1 << 0) | (1 << 8) | (1 << 9));
-
-	state->interrupt = CreateEvent(NULL, FALSE, FALSE, NULL);
-	state->breakev = CreateEvent(NULL, TRUE, FALSE, NULL);
-
-	if (!InterruptInitialize(state->sysintr, state->interrupt, NULL, 0)) {
-		DEBUGMSG(ZONE_ERROR, (TEXT("COM_Open: InterruptInitialize failed\r\n")));
-		CloseHandle(state->interrupt);
-		CloseHandle(state->breakev);
-		return NULL;
-	}
-
-	state->is_open = TRUE;
+	OpenPort(state);
 
 	return (DWORD)state;
 }
@@ -206,26 +283,25 @@ extern "C" BOOL COM_Close(DWORD hOpenContext)
 	port_state *state = (port_state*)hOpenContext;
 
 	DEBUGMSG(ZONE_INFO, (TEXT("COM_Close: %u\r\n"), hOpenContext));
+	ClosePort(state);
 
-	if (!state->is_open) {
-		DEBUGMSG(ZONE_INFO, (TEXT("COM_Close: not open!\r\n")));
-		return TRUE;
-	}
-
-	mmio_write(state->io_base + UART_IMSC, 0);
-	mmio_write(state->io_base + UART_CR, 0);
-
-	if (WaitForSingleObject(state->interrupt, 0) != WAIT_TIMEOUT)
-		InterruptDone(state->sysintr);
-
-	SetEvent(state->breakev);
-
-	InterruptDisable(state->sysintr);
-	CloseHandle(state->interrupt);
-	CloseHandle(state->breakev);
-	state->is_open = FALSE;
-	
 	return TRUE;
+}
+
+static DWORD adjust_timeout(DWORD start, DWORD timeout)
+{
+	if (timeout == 0)
+		return 0;
+	if (timeout == INFINITE)
+		return INFINITE;
+
+	DWORD tick = GetTickCount();
+	DWORD deadline = start + timeout;
+
+	if (tick >= start && deadline > tick)
+		return deadline - tick;
+
+	return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -236,36 +312,97 @@ extern "C" BOOL COM_Close(DWORD hOpenContext)
 //
 extern "C" DWORD COM_Read(DWORD hOpenContext, LPVOID pBuffer, DWORD Count, PULONG pBytesRead)
 {
-	DEBUGMSG(ZONE_INFO, (TEXT("COM_Read: Count=%u\r\n"), Count));
-
 	port_state *state = (port_state*)hOpenContext;
-	BYTE *buf = (BYTE*)pBuffer;
-	DWORD i = 0;
 
-	*pBytesRead = 0;
-	if (Count == 0)
-		return 0;
+	DWORD bytes = 0;
 
-	DWORD total_timeout = state->timeouts.ReadTotalTimeoutMultiplier * Count + state->timeouts.ReadTotalTimeoutConstant;
-	if (total_timeout == 0)
-		total_timeout = INFINITE;
+	DWORD interval_timeout;
+	DWORD first_timeout;
+	DWORD total_timeout;
+	if (state->timeouts.ReadIntervalTimeout == MAXDWORD &&
+		state->timeouts.ReadTotalTimeoutMultiplier == 0 &&
+		state->timeouts.ReadTotalTimeoutConstant == 0)
+	{
+		// special case, nonblocking
+		interval_timeout = 0;
+		first_timeout = 0;
+		total_timeout = 0;
+	}
+	else
+	if (state->timeouts.ReadIntervalTimeout == MAXDWORD &&
+		state->timeouts.ReadTotalTimeoutMultiplier == MAXDWORD &&
+		state->timeouts.ReadTotalTimeoutConstant != 0 && state->timeouts.ReadTotalTimeoutConstant != MAXDWORD)
+	{
+		// special case, blocking until any data arrives
+		interval_timeout = 0;
+		first_timeout = state->timeouts.ReadTotalTimeoutConstant;
+		total_timeout = 0;
+	}
+	else
+	{
+		// regular case
+		interval_timeout = state->timeouts.ReadIntervalTimeout;
+		first_timeout = Count * state->timeouts.ReadTotalTimeoutMultiplier + state->timeouts.ReadTotalTimeoutConstant;
+		total_timeout = first_timeout;
 
-	ResetEvent(state->breakev);
-	HANDLE handles[] = { state->interrupt, state->breakev };
-	DWORD wait = WaitForMultipleObjects(2, handles, FALSE, total_timeout);
-	if (wait == WAIT_TIMEOUT || wait == WAIT_OBJECT_0 + 1)
-		return 0;
-
-	while ((mmio_read(state->io_base + UART_FR) & (1 << 4)) == 0) {
-		buf[i++] = (BYTE)mmio_read(state->io_base + UART_DR);
-		if (i == Count)
-			break;
+		if (interval_timeout == 0)
+			interval_timeout = INFINITE;
+		if (first_timeout == 0)
+			first_timeout = INFINITE;
+		if (total_timeout == 0)
+			total_timeout = INFINITE;
 	}
 
-	InterruptDone(state->sysintr);
+	DWORD start = GetTickCount();
 
-	*pBytesRead = i;
-	return i;
+	DEBUGMSG(ZONE_INFO, (TEXT("COM_Read: start: %u\r\n"), Count));
+
+	BOOL keep = TRUE;
+	while (Count && keep) {
+		DWORD writepos = vol_dword(state->writepos);
+
+		if (writepos == state->readpos) {
+			DWORD timeout;
+			if (!bytes)
+				timeout = first_timeout;
+			else
+				timeout = min(interval_timeout, adjust_timeout(start, total_timeout));
+
+			ResetEvent(state->abortev);
+			HANDLE handles[] = { state->waitev, state->abortev };
+			if (WaitForMultipleObjects(2, handles, FALSE, timeout) != WAIT_OBJECT_0)
+				keep = FALSE;
+
+			writepos = vol_dword(state->writepos);
+		}
+
+		if (writepos >= state->readpos) {
+			DWORD cnt = min(Count, writepos - state->readpos);
+			memcpy((char*)pBuffer + bytes, &state->buffer[state->readpos], cnt);
+			state->readpos = (state->readpos + cnt) & (BUF_SIZE - 1);
+			bytes += cnt;
+			Count -= cnt;
+		} else {
+			DWORD cnt = min(Count, BUF_SIZE - state->readpos);
+			memcpy((char*)pBuffer + bytes, &state->buffer[state->readpos], cnt);
+			state->readpos = (state->readpos + cnt) & (BUF_SIZE - 1);
+			bytes += cnt;
+			Count -= cnt;
+
+			cnt = min(Count, writepos - state->readpos);
+			memcpy((char*)pBuffer + bytes, &state->buffer[state->readpos], cnt);
+			state->readpos = (state->readpos + cnt) & (BUF_SIZE - 1);
+			bytes += cnt;
+			Count -= cnt;
+		}
+	}
+
+	DEBUGMSG(ZONE_INFO, (TEXT("COM_Read: end: %u\r\n"), bytes));
+
+	if (pBytesRead)
+		*pBytesRead = bytes;
+
+	return bytes;
 }
 
 // ---------------------------------------------------------------------------
@@ -318,15 +455,67 @@ extern "C" BOOL COM_IOControl(
 		case IOCTL_SERIAL_SET_XON:
 		case IOCTL_SERIAL_SET_QUEUE_SIZE:
 		case IOCTL_SERIAL_SET_DCB:
+			return TRUE;
+		case IOCTL_SERIAL_GET_WAIT_MASK:
+			{
+				if (dwLenOut < 4) {
+					SetLastError(ERROR_INSUFFICIENT_BUFFER);
+					return FALSE;
+				}
+				*(DWORD*)pBufOut = state->waitmask;
+				*pdwActualOut = 4;
+				return TRUE;
+			}
+		case IOCTL_SERIAL_SET_WAIT_MASK:
+			{
+				if (dwLenIn < 4) {
+					SetLastError(ERROR_INSUFFICIENT_BUFFER);
+					return FALSE;
+				}
+				state->waitmask = *(DWORD*)pBufIn;
+				SetEvent(state->abortev);
+				return TRUE;
+			}
+		case IOCTL_SERIAL_WAIT_ON_MASK:
+			{
+				if (dwLenOut < 4) {
+					SetLastError(ERROR_INSUFFICIENT_BUFFER);
+					return FALSE;
+				}
+				*pdwActualOut = 4;
+				DEBUGMSG(ZONE_INFO, (TEXT("COM_IOControl: wait %u\r\n"), state->waitmask));
+				ResetEvent(state->abortev);
+				if (state->waitmask & EV_RXCHAR) {
+					HANDLE handles[] = { state->waitev, state->abortev };
+					DWORD wait = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
+					if (wait == WAIT_OBJECT_0)
+						*(DWORD*)pBufOut = EV_RXCHAR;
+					else
+						*(DWORD*)pBufOut = 0;
+					return TRUE;
+				}
+				WaitForSingleObject(state->abortev, INFINITE);
+				*(DWORD*)pBufOut = 0;
+				return TRUE;
+			}
+		case IOCTL_SERIAL_IMMEDIATE_CHAR:
+			if (dwLenIn < 1) {
+				SetLastError(ERROR_INSUFFICIENT_BUFFER);
+				return FALSE;
+			}
+			COM_Write(hOpenContext, pBufIn, 1);
+			return TRUE;
 		case IOCTL_SERIAL_PURGE:
 			{
 				if (dwLenIn < 4) {
 					SetLastError(ERROR_INSUFFICIENT_BUFFER);
 					return FALSE;
 				}
-				DWORD func = *(DWORD*)pBufIn;
-				if (func & PURGE_RXABORT)
-					SetEvent(state->breakev);
+				DWORD arg = *(DWORD*)pBufIn;
+				if (arg & PURGE_RXCLEAR)
+					state->readpos = state->writepos;
+				if (arg & PURGE_RXABORT)
+					SetEvent(state->abortev);
 				return TRUE;
 			}
 
@@ -356,11 +545,13 @@ extern "C" BOOL COM_IOControl(
 				prop.dwServiceMask = SP_SERIALCOMM;
 				prop.dwMaxBaud = BAUD_115200;
 				prop.dwProvSubType = PST_RS232;
-				prop.dwProvCapabilities = PCF_TOTALTIMEOUTS;
-				prop.dwSettableParams = SP_BAUD | SP_DATABITS | SP_STOPBITS;
+				prop.dwProvCapabilities = PCF_TOTALTIMEOUTS | PCF_INTTIMEOUTS;
+				prop.dwSettableParams = SP_BAUD | SP_DATABITS | SP_STOPBITS | SP_PARITY;
 				prop.dwSettableBaud = BAUD_115200;
 				prop.wSettableData = DATABITS_8;
-				prop.wSettableStopParity = STOPBITS_10;
+				prop.wSettableStopParity = STOPBITS_10 | PARITY_NONE;
+				prop.dwCurrentTxQueue = BUF_SIZE;
+				prop.dwCurrentRxQueue = BUF_SIZE;
 
 				memcpy(pBufOut, &prop, sizeof(COMMPROP));
 				*pdwActualOut = sizeof(COMMPROP);
@@ -380,10 +571,7 @@ extern "C" BOOL COM_IOControl(
 				dcb.DCBlength = sizeof(DCB);
 				dcb.BaudRate = CBR_115200;
 				dcb.fBinary = 1;
-				dcb.fDtrControl = DTR_CONTROL_DISABLE;
-				dcb.fRtsControl = RTS_CONTROL_DISABLE;
 				dcb.ByteSize = 8;
-				dcb.StopBits = ONESTOPBIT;
 
 				memcpy(pBufOut, &dcb, sizeof(DCB));
 				*pdwActualOut = sizeof(DCB);

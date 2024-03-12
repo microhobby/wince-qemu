@@ -12,6 +12,7 @@
 //
 #include <windows.h>
 #include <oemglobal.h>
+#include <nkexport.h>
 
 void _wfi(void);
 // ---------------------------------------------------------------------------
@@ -25,9 +26,7 @@ void _wfi(void);
 //
 void OEMIdle(DWORD dwIdleParam)
 {
-  // Fill in idle code here.
-	//DEBUGMSG(1, (TEXT("OEMIdle\r\n")));
-	_wfi();
+
 }
 
 // ---------------------------------------------------------------------------
@@ -68,10 +67,7 @@ void OEMHaltSystem(void)
 //
 void OEMIdleEx(LARGE_INTEGER *pliIdleTime)
 {
-	DEBUGMSG(1, (TEXT("OEMIdleEx\r\n")));
-  // fill in idle code here
-
-  return;
+	DWORD start = CurMSec;
+	_wfi();
+	pliIdleTime->QuadPart += CurMSec - start;
 }
-
-

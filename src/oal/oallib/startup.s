@@ -43,10 +43,6 @@
 
     LEAF_ENTRY StartUp
 
-	; enable VFP
-	ldr r0, =0xf00000
-	mcr p15, 0, r0, c1, c0, 2
-
 	; read MPIDR
 	mrc p15, 0, r0, c0, c0, 5
 	ands r0, r0, #3
@@ -117,12 +113,22 @@ VIRTUALSMP
     strex   r3, r2, [r1]
     cmp     r3, #0x0
     bne     VIRTUALSMP
-    
+
+	bl      Enable_VFP
+
     ldr     r0, =g_pfnNkContinue
     ldr     r0, [r0]
     mov     pc, r0
 
 CONT
+	; early debug output
+	ldr     r0, =0x1c090000
+	ldr     r1, =0x62
+	str     r1, [r0]
+
+	; enable VFP
+	bl      Enable_VFP
+
 	; set temporary stack pointer
 	ldr sp, =0x15000000
 
@@ -155,6 +161,12 @@ CONT
 
     LEAF_ENTRY  Do_DSB
 	dsb
+    bx    lr
+    ENTRY_END
+
+    LEAF_ENTRY  Enable_VFP
+	ldr r0, =0xf00000
+	mcr p15, 0, r0, c1, c0, 2
     bx    lr
     ENTRY_END
 
