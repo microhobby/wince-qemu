@@ -1,0 +1,64 @@
+!if 0
+Copyright (c) Microsoft Corporation.  All rights reserved.
+!endif
+!if 0
+Use of this sample source code is subject to the terms of the Microsoft
+license agreement under which you licensed this sample source code. If
+you did not accept the terms of the license agreement, you are not
+authorized to use this sample source code. For the terms of the license,
+please see the license agreement between you and Microsoft or, if applicable,
+see the LICENSE.RTF on your install media or the root of your tools installation.
+THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
+!endif
+# These indicate we're building kitl.dll
+TARGETNAME=kitl
+TARGETTYPE=DYNLINK
+# Finish all previous directories before building this one
+SYNCHRONIZE_DRAIN=1
+
+# Our entry point is the KitlDllMain function
+DLLENTRY=KitlDllMain
+# We don't have any special function exports
+DEFFILE=
+
+# Include the platform\common header directory.
+INCLUDES=$(INCLUDES);$(_PLATFORMROOT)\common\src\inc;..\inc
+
+# Source files we're going to compile
+SOURCES=\
+    init.c \
+    ioctl.c \
+    timer.c \
+
+# Libraries we're going to link to form the .exe
+# These include:
+# kitlcore: implements the KitlDllMain function which
+#           retrieves global function pointers between the
+#           OAL and kernel
+#
+# nkstub  : translation library for kernel functions so their
+#           legacy names can be used
+#
+# oemstub : translation library for OAL functions so their
+#           legacy names can be used
+#
+# oal_kitl: the platform\common kitl support library, the
+#           name oal is only there for legacy purposes.  This
+#           library is unrelated to the OAL.
+#
+# kitl_log: the platform\common kitl debug message library
+#
+# kitleth_platcom :
+#           the platform-common compatible ethernet transport
+#           library we built in the ethdrv directory
+TARGETLIBS =    \
+    $(_COMMONOAKROOT)\lib\$(_CPUDEPPATH)\kitlcore.lib \
+    $(_COMMONOAKROOT)\lib\$(_CPUDEPPATH)\nkstub.lib   \
+    $(_COMMONOAKROOT)\lib\$(_CPUDEPPATH)\oemstub.lib  \
+    $(_PLATCOMMONLIB)\$(_CPUDEPPATH)\oal_kitl.lib     \
+    $(_PLATCOMMONLIB)\$(_CPUDEPPATH)\kitl_log.lib     \
+    $(_PLATLIB)\$(_CPUDEPPATH)\kitleth_platcom.lib
+
+FILE_VIEW_ROOT_FOLDER= \
+    readme.html \
+

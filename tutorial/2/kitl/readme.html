@@ -1,0 +1,33 @@
+<!--
+Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<!--
+Use of this sample source code is subject to the terms of the Microsoft
+license agreement under which you licensed this sample source code. If
+you did not accept the terms of the license agreement, you are not
+authorized to use this sample source code. For the terms of the license,
+please see the license agreement between you and Microsoft or, if applicable,
+see the LICENSE.RTF on your install media or the root of your tools installation.
+THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
+-->
+Welcome to the Implementing KITL Ethernet tutorial.
+
+This tutorial demonstrates implementing a kitl.dll that supports the Ethernet KITL debug transport.  The implementation is based on the BSP KITL template and is split into two components.
+
+1. The driver library that implements the PKITLTRANSPORT (found in kitl.h) structure functions.
+2. The KITL/kernel interface code that implements the kernel interface and initializes the PKITLTRANSPORT structure.
+
+Start out by looking at init.c in the \kitl directory.  The OEMKitlStartup function is straightforward and doesn't require additional code for the Ethernet transport.  You may want to read some arguments from the bootloader, but the only universal requirement is that KitlInit is called at the end.
+
+The OEMKitlInit function is more detailed than the original template.  In this implementation we initialize all of the values of the PKITLTRANSPORT structure.  There are some values that need to be changed (called out in the comments), but for the most part the implementation is complete.
+
+The OEMKitlIoctl function also has no explicit requirements and can be left as-is.
+
+The real work lies in the KITL Ethernet driver library, which is in the \ethdrv directory.  Looking at ethdrv.c, we can see the requirements for each of the PKITLTRANSPORT function.  The majority of the work will be in the Send/Receive functions and the Encode/Decode functions.  Send and receive just utilize the hardware; encode/decode need to handle the meat of the transport itself.  The host-side expects certain frame structure which is described in the comments for the encode structure.  It also expects that the device will be able to decode a variety of frames (again, requirements listed in the function comments).
+
+Once you've implemented these functions, you should have a working KITL implementation.  The rest of the functions are straightforward.  The only one of particular interest is the KITLEthEnableInt function.  This is an optional function that enables/disables the interrupt for the KITL Ethernet hardware.  Implementing interrupt-based KITL support necessitates this function, and it is worth doing, because interrupt-based KITL is significantly more performant.  However, interrupt-based KITL is difficult to implement because bugs in the interrupt implementation can cause the transport to halt.  Generally it is recommended to save this function for last; get a working polling-mode implementation first, then add interrupts.
+
+One important note is that you can use the platform\common code to handle most of the KITL Ethernet transport-specific code (such as encoding / decoding frames) for you.  Since the Ethernet transport itself is not hardware-specific, this code will work with any hardware and help you implement KITL more quickly.  See the "Implementing KITL Ethernet using platform\common" tutorial for more details.
+
+Relevant tutorials:
+Implementing KITL Ethernet using platform\common

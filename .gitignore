@@ -1,0 +1,6 @@
+*.log
+*.dat
+*.err
+*.wrn
+**/obj/**
+*.out

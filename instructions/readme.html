@@ -1,0 +1,51 @@
+<!--
+Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<!--
+Use of this sample source code is subject to the terms of the Microsoft
+license agreement under which you licensed this sample source code. If
+you did not accept the terms of the license agreement, you are not
+authorized to use this sample source code. For the terms of the license,
+please see the license agreement between you and Microsoft or, if applicable,
+see the LICENSE.RTF on your install media or the root of your tools installation.
+THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
+-->
+Welcome to the BSP (Board Support Package) Template!
+
+Introduction and Purpose
+---
+The BSP Template is designed to help developers who are new to Windows CE BSPs.  It is also designed to assist developers who want more information on a specific CE BSP technology.
+
+Before we go any further, what exactly is a BSP?  The acronym BSP stands for Board Support Package.  A BSP is the hardware-specific code that enables the Windows CE operating system to run on a particular piece of hardware.  This code is necessary so that the CE kernel to do things like enable and disable interrupts, read the system time, change the power state of the system, display graphics, play audio, and so on.  Generally speaking, the BSP is responsible for enabling all of the hardware capabilities of the board.
+
+BSP Template Layout
+---
+The BSP Template is divided into two sections: Templates and Tutorials.
+
+Templates are the description of the minimal functionality you need for a working BSP component, such as the OAL (OEM Adaptation Layer), KITL (Kernel Independent Transport Layer), and bootloader.  You'll find more detailed descriptions of these in the readme files for the individual templates.
+
+Tutorials build on the templates and are designed to show one specific task in detail.  More specifically, the tutorials clone and modify the templates, so each tutorial is based directly upon a template, and you can use a diff program if you want to see all of the differences between a tutorial and its parent template.
+
+Each of the tutorials is standalone, meaning the only thing you need to know in advance is the template on which the tutorial is based.  Put differently, you can examine the tutorials in any order and no tutorial requires that you have completed another tutorial.
+
+How to learn about BSPs using the BSP Template
+---
+Create a new OSDesign in Visual Studio and select the BSP Template as your BSP (you've probably already done this).  Open the Catalog Items window in Visual Studio.  Expand the BSP node, then expand the BSP Template node.  Finally, expand the template or tutorial node you are interested in and double click on the "source and instructions" item.  This will take you to a directory in the Solution Explorer, and this directory will contain instructions for that template/tutorial.  Just expand the directory in Solution Explorer to see the instructions as well as the source code.
+
+Most templates/tutorials will have both instructions and source code.  Read the instructions first; they will direct you to the important source code.
+
+How to create a new BSP using the BSP Template
+---
+Close Visual Studio and navigate to the platform\BSPTemplate directory.  Make a copy of the entire directory and rename it (for example, NewBSP).  In the NewBSP\catalog directory, rename BSPTemplate.PbcXml to NewBSP.PbcXml.  Do a search in replace in this file, replacing all instances of BSPTemplate with NewBSP.  Now you can use the NewBSP directory as a starting point for your new BSP.  Open Visual Studio and it will appear as an option for new OSDesigns.
+
+Differences from sample BSPs
+---
+Because the BSP Template is intended as a learning tool, it looks slightly different from other Windows CE sample BSPs.  In particular, the sample BSPs may have the same layout but borrow some of their implementation from the code in the platform\common directory.  Take a look at the tutorials if you want to learn more about platform\common.  The templates do not use platform\common so that they are easier to understand.
+
+Recommended Order
+---
+While you can look at the templates and tutorials in any order, it is recommended that you examine the OAL Template first, followed by the KITL template, then the bootloader template.  This is a logical order in which to learn about Windows CE BSPs.  From there, you can go through the tutorials in any order.
+
+Compilable code
+---
+All of the templates and tutorials in the BSP Template successfully compile and link in their original form.  So if you are making a new BSP based on the template, you have a known-good starting point that can help you debug build errors.

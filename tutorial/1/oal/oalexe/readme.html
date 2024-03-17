@@ -1,0 +1,28 @@
+<!--
+Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<!--
+Use of this sample source code is subject to the terms of the Microsoft
+license agreement under which you licensed this sample source code. If
+you did not accept the terms of the license agreement, you are not
+authorized to use this sample source code. For the terms of the license,
+please see the license agreement between you and Microsoft or, if applicable,
+see the LICENSE.RTF on your install media or the root of your tools installation.
+THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
+-->
+Welcome to the platform\common tutorial.
+
+In this tutorial, we'll learn how to use platform\common libraries in a BSP.  Platform\common provides resuable code that can speed BSP development.  This code is compiled into static libaries that you can link into oal.exe.  Generally it replaces functions that you would implement in oal.lib.
+
+In this example we'll look at the function OEMIoControl.  Normally, you would have to implement this in your BSP as it's one of the required kernel entry points.  As it turns out, the implementation of this function tends to be quite similar between BSPs; in fact, in many cases it is identical.  OEMIoControl is exceptional in that it makes calls to other OAL functions in response to the IOCTL code passed in by the kernel, but for the purpose of this tutorial we'll ignore that.
+
+Using the platform\common version of OEMIoControl is simple.  First, you'll remove OEMIoControl from your BSP code: see oal\oallib\ioctl.c.  Then, you'll change the SOURCES file in oal\oalexe to link in the platform\common library that implements OEMIoControl.  That library is oal_ioctl.lib.  You can find out where the code is in platform\common by doing a text search of SOURCES files in platform\common - look for the string "TARGETNAME=oal_ioctl" in those files.  You'll find the match in platform\common\src\common\ioctl\SOURCES.  In the sources file you can see the files from that directory are compiled and linked into oal_ioctl.lib - those are the functions you'll link with your OAL with you specifiy oal_ioctl.lib as a TARGETLIB for oal.exe.
+
+Once we've removed OEMIoControl from our BSP code and indicated in the SOURCES file that we're linking oal_ioctl.lib, we can simply rebuild the oal directory and we're ready to go with the platform\common implementation of OEMIoControl.
+
+However, if we now try to build oal.exe, we will run into errors because the platform\common expects some variables to be defined.  Namely, these variables are dpCurSettings, which define the debug zones for our OAL, and g_oalIoCtlTable, which describes the IOCTLs we are using.  We'll pick up dpCurSettings by adding the platform\common library oal_log in the same way that we added oal_ioctl.  Then we'll use the platform\common default IOCTL table by adding the required g_oalIoCtlTable variable and including oal_ioctl_tab.h from platform\common in our ioctl.c file.  We won't worry about g_oalIoctlTable since our goal in this tutorial is just to see how to use platform\common code and not to implement specific support.
+
+Other relevant tutorials:
+Implementing required IOCTLs in OEMIoControl
+Implementing custom IOCTLs in OEMIoControl
+Modifying code in platform\common

@@ -1,0 +1,30 @@
+<!--
+Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<!--
+Use of this sample source code is subject to the terms of the Microsoft
+license agreement under which you licensed this sample source code. If
+you did not accept the terms of the license agreement, you are not
+authorized to use this sample source code. For the terms of the license,
+please see the license agreement between you and Microsoft or, if applicable,
+see the LICENSE.RTF on your install media or the root of your tools installation.
+THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
+-->
+Welcome to the halflat tutorial.
+
+In this tutorial, we'll learn how to implement a simply display driver using the HALFlat functionality supplied by Windows CE.
+
+What does HALFlat mean?  HAL stands for Hardware Abstraction Layer, which in Windows CE is the same thing as the OAL (OEM Abstraction Layer).  The term "flat" means that the display driver's frame buffer (where we write the pixel data) is exposed as linear continguous memory.
+
+HALFlat is a combination of two components: an operating-system-provided display driver that interfaces with the Graphics, Windows, and Events Subsystem (GWES) of the operating system, and an OEMIoControl handler that the OS display driver calls to interface with the hardware.
+
+So, to get the HALFlat display driver working, we'll need to do two things.  First we'll need to implement the OEMIoControl handler.  Then we'll need to include the operating-system-provided display driver and its registry settings in our Windows CE image.
+
+To start, we'll need to implement support for the OEMIoControl code IOCTL_HAL_DDI.  This control code is how the operating-system-provided driver interacts with our display hardware.  We'll implement a few functions that handle the IOCTL_HAL_DDI code and its subcodes.  See oallib\ioctl.c for the OEMIoControl implementation that handles IOCTL_HAL_DDI.  See oallib\ddi.c for the implementation of the subcode handlers.  The function comments for each of the subcode handlers will indicate whether the subcode support is required or optional for HALFlat support.
+
+There is one important IOCTL convention to note when implementing the handlers.  The last argument to OEMIocontrol is the lpBytesReturned parameter.  lpBytesReturned is a UINT32 allocated by the caller.  This is an optional UINT32 parameter that we use to describe to the caller how many bytes we filled into the caller's output buffer (lpOutBuf in OEMIoControl) during successful IOCTL handling.  However, if the caller calls us with insufficient buffer size (nInBufSize), we instead return in lpBytesReturned how many bytes we would need for a successful call, and SetLastError to ERROR_INSUFFICIENT_BUFFER.  So, even though the call has failed we, lpBytesReturned is a valid value.  The caller can read this value and call the IOCTL again, this time with a buffer of the correct size.  This IOCTL convention occurs frequently, even outside the HALFlat driver.
+
+We'll need to add the IOCTL handlers code to our OAL source code (see oallib\sources) to use it.  Finally, we'll need to include the operating system driver and its registry settings.  To do this, we'll modify files\platform.bib and files\platform.reg.  See the comments in these files for details.
+
+Other relevant tutorials:
+Implementing custom IOCTLs in OEMIoControl

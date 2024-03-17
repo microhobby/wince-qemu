@@ -1,0 +1,27 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/../common/src/inc/**",
+                "${workspaceFolder}/../../public/common/oak/inc/**",
+                "${workspaceFolder}/../../public/common/sdk/inc/**",
+                "${workspaceFolder}/../../public/common/ddk/inc/**"
+            ],
+            "defines": [
+                "UNICODE",
+                "_UNICODE",
+                "ARM",
+                "WINCEOEM=1",
+                "RELEASETYPE=PLATFORM"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}

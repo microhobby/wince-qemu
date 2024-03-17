@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<!--
+Use of this sample source code is subject to the terms of the Microsoft
+license agreement under which you licensed this sample source code. If
+you did not accept the terms of the license agreement, you are not
+authorized to use this sample source code. For the terms of the license,
+please see the license agreement between you and Microsoft or, if applicable,
+see the LICENSE.RTF on your install media or the root of your tools installation.
+THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
+-->
+<CatalogFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" RequiredVersion="7.00" xsi:schemaLocation="urn:Microsoft.PlatformBuilder/Catalog PbcXml600.xsd" xmlns="urn:Microsoft.PlatformBuilder/Catalog">
+  <FileInformation Id="FileInformation:MS:custom">
+    <Title>BSP Template</Title>
+    <Description>A Template BSP for the purpose of learning about BSPs in Windows Embedded Compact.</Description>
+    <Vendor>Microsoft</Vendor>
+    <OSVersion>7.00</OSVersion>
+    <FileVersion>7.00</FileVersion>
+  </FileInformation>
+  <Bsp Id="Bsp:MS:custom:ARMV7">
+    <Title>QEMU custom : ARMv7</Title>
+    <Description>A Template BSP for the purpose of learning about BSPs in Windows Embedded Compact.</Description>
+    <PlatformDirectory>custom</PlatformDirectory>
+    <CpuId>Cpu:ARMV7</CpuId>
+    <BspItemId>Item:MS:customInstructions:custom</BspItemId>
+    <BspItemId>Item:MS:TemplateBootloader:custom</BspItemId>
+    <BspItemId>Item:MS:TemplateBootloader2:custom</BspItemId>
+    <BspItemId>Item:MS:TemplateBSPConfigFiles:custom</BspItemId>
+    <BspItemId>Item:MS:TemplateOAL:custom</BspItemId>
+    <BspItemId>Item:MS:TemplateKITL:custom</BspItemId>
+    <BspItemId>Item:MS:TemplateStreamDriver:custom</BspItemId>
+    <BspItemId>Item:MS:TutorialPlatformCommon:custom</BspItemId>
+    <BspItemId>Item:MS:TutorialKitlEthernet:custom</BspItemId>
+    <BspItemId>Item:MS:TutorialKitlEthernetPlatformCommon:custom</BspItemId>
+    <BspItemId>Item:MS:TutorialHALFlatDisplayDriver:custom</BspItemId>
+  </Bsp>
+  <Item Id="Item:MS:customInstructions:custom">
+    <Title>!BSP Template Instructions - Start Here!</Title>
+    <Description>BSP Template Instructions</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>BSP Template Instructions</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\INSTRUCTIONS</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TemplateOAL:custom">
+    <Title>Template OAL</Title>
+    <Description>OAL Tutorial and Template BSP Instructions</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>Template OAL source code</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\SRC\OAL\OALLIB</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TemplateBootloader:custom">
+    <Title>Template Bootloader (BLCommon)</Title>
+    <Description>Bootloader Template using BLCommon Framework</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>Template Bootloader source code using BLCommon Framework</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\SRC\BOOTLOADER\BOOT</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TemplateBootloader2:custom">
+    <Title>Template Bootloader (CEBF)</Title>
+    <Description>Bootloader Template using CE Boot Framework</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>Template Bootloader source code using CE Boot Framework</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\SRC\BOOTLOADER\BLDR</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TemplateBSPConfigFiles:custom">
+    <Title>Template Config Files</Title>
+    <Description>BSP Config Files Template</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>Template Config Files source code</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\FILES</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TemplateKITL:custom">
+    <Title>Template KITL</Title>
+    <Description>KITL Template</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>Template KITL source code</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\SRC\KITL</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TemplateStreamDriver:custom">
+    <Title>Template Stream Driver</Title>
+    <Description>Stream Driver Template</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>Template Stream Driver source code</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\SRC\DRIVERS\STREAMDRIVER</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TutorialPlatformCommon:custom">
+    <Title>Tutorial: Platform\common</Title>
+    <Description>Tutorial: OAL: Reusable Code and platform\common</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>Platform\common Tutorial Source Code and Instructions</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\TUTORIAL\1\OAL\OALEXE</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TutorialKitlEthernet:custom">
+    <Title>Tutorial: KITL Ethernet</Title>
+    <Description>Tutorial: KITL: Implementing Ethernet KITL</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>KITL Ethernet Source Code and Instructions</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\TUTORIAL\2\KITL</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TutorialKitlEthernetPlatformCommon:custom">
+    <Title>Tutorial: KITL Ethernet using platform\common</Title>
+    <Description>Tutorial: KITL: Implementing Ethernet KITL</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>KITL Ethernet using platform\common Source Code and Instructions</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\TUTORIAL\3\KITL</Path>
+    </SourceCode>
+  </Item>
+  <Item Id="Item:MS:TutorialHALFlatDisplayDriver:custom">
+    <Title>Tutorial: HALFlat display driver</Title>
+    <Description>Tutorial: Implementing a HALFlat display driver</Description>
+    <Type>BspSpecific</Type>
+    <ChooseOneGroup>true</ChooseOneGroup>
+    <Location />
+    <SourceCode>
+      <Title>HALFlat display driver Source Code and Instructions</Title>
+      <Path>$(_WINCEROOT)\PLATFORM\custom\TUTORIAL\4\OAL\OALLIB</Path>
+    </SourceCode>
+  </Item>
+</CatalogFile>

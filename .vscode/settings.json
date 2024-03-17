@@ -1,0 +1,30 @@
+{
+    "window.title": "${activeEditorShort} - WinCE QEMU BSP",
+    "window.width": 1175,
+    "window.height": 1045,
+    "workbench.colorCustomizations": {},
+    "workbench.editor.languageDetection": false,
+    "files.associations": {
+        ".fantomasignore": "ignore",
+        "Dockerfile*": "dockerfile",
+        "Containerfile*": "dockerfile",
+        "docker-compose*": "yaml",
+        "*.scr": "shellscript",
+        "*defconfig*": "kconfig",
+        "*.build": "powershell",
+        "*.run": "powershell",
+        "*COMMIT_EDITMSG*": "git-commit",
+        ".wslconfig": "ini",
+        "*.defs": "makefile",
+        "*.ld": "linkerscript",
+        ".env*": "dotenv",
+        "oemglobal.h": "c",
+        "nkexport.h": "c",
+        "windows.h": "c",
+        "nkintr.h": "c",
+        "pkfuncs.h": "c",
+        "ceddk.h": "c",
+        "mmio.h": "c",
+        "*.err": "log"
+    }
+}

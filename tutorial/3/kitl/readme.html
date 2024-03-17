@@ -1,0 +1,33 @@
+<!--
+Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<!--
+Use of this sample source code is subject to the terms of the Microsoft
+license agreement under which you licensed this sample source code. If
+you did not accept the terms of the license agreement, you are not
+authorized to use this sample source code. For the terms of the license,
+please see the license agreement between you and Microsoft or, if applicable,
+see the LICENSE.RTF on your install media or the root of your tools installation.
+THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
+-->
+Welcome to the Implementing KITL Ethernet using platform\common tutorial.
+
+This tutorial demonstrates implementing a kitl.dll that supports the Ethernet KITL debug transport using the platform\common code as a base.  The implementation is based on the BSP KITL template and is split into two components.
+
+1. The driver libary that implements the OAL_KITL_ETH_DRIVER structure functions.
+2. The KITL/kernel interface code that implements the kernel interface and initializes the OAL_KITL_ETH_DRIVER structure and other structures used by platform\common.
+
+Start out by looking at init.c in the \kitl directory.  Normally there are three functions that directly interface the kernel: OEMKitlStartup, OEMKitlInit, and OEMKitlIoctl.  The platform\common code actually provides fully functional implementations of OEMKitlInit and OEMKitlIoctl, so the only function necessary for you to implement is the OEMKitlStartup function.
+
+The OEMKitlStartup function sets up OAL_KITL_ARGS and OAL_KITL_DEVICE structures as defined in platform\common\src\inc\oal_kitl.h.  There are several fields to initialize that describe the properties of the KITL Ethernet hardware as well as the driver that supports the hardware.  Each variable that needs to be initialized is commented with a description and recommendation.  By following the comments, you can fill out the structures.  Once they're fully initialized, we pass them with the OALKitlInit function in the platform\common code which takes care of the rest automatically.
+
+Without the platform\common code, you'd instead be filling out a PKITLTRANSPORT structure (found in kitl.c) during OEMKitlInit and passing that to the kernel.  Using the platform\common code saves you the cost of implementing PKITLTRANSPORT functions that are specific to the Ethernet debug transport but are not hardware-specific.  An example of such a function is the EncodeFrame function, which wraps an outgoing frame in an Ethernet debug transport-specific header.  Using the platform\common code, you don't have to worry about knowing this transport-specific function because you get it for free.
+
+One important part of the OAL_KITL_DEVICE structure that you must initialize during OEMKitlStartup is the OAL_KITL_ETH_DRIVER.  This structure contains function pointers to the KITL Ethernet driver functions that are necessary to support the platform\common code.  It's basically the platform\common version of PKITLTRANSPORT.  The functions are prototyped in \inc\bsp_ethdrv.h and implemented in \ethdrv\ethdrv.c.  Notice that there are no EncodeFrame, DecodeFrame, GetHostCfg, or SetDevCfg functions, even though the PKITLTRANSPORT structure requires them.  The platform\common code takes care of implementing these functions as well as passing them back to the kernel through the PKITLTRANSPORT structure.
+
+There are only three functions required to support the OAL_KITL_ETH_DRIVER: Init, SendFrame, and GetFrame (receive).  The rest of the functions are optional, and their comments describe the advantages of implementing them.
+
+The Multicast and PacketFilter functions are unusual because they are unused by Ethernet KITL Debug transport.  Instead, they are used to support VMINI (Virtual Miniport adapter).  This is a technology that allows Ethernet KITL hardware to also act as a CE network miniport driver, effectively sharing Ethernet hardware between KITL and the CE networking stack.  VMINI functionality comes nearly "for free" when you use the platform\common code to implement KITL.  Normally to support VMINI you would need to add numerous VMINI handlers to your KitlIoctl function, but the platform\common code implements this for you.
+
+Relevant tutorials:
+Implementing KITL Ethernet
