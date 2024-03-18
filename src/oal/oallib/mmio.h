@@ -4,8 +4,8 @@
 
 enum
 {
-	GIC_BASE = 0x92000000,
- 
+	GIC_BASE = 0xA2000000,
+
     GICD_CTLR = 0x1000,
 	GICD_ISENABLER0 = 0x1100,
 	GICD_ICENABLER0 = 0x1180,
@@ -22,8 +22,8 @@ enum
 
 enum
 {
-	SP804_BASE  = 0x91110000,
-	SP804_BASE2 = 0x91110020,
+	SP804_BASE  = 0xA1110000,
+	SP804_BASE2 = 0xA1110020,
 
     TimerLoad    = 0x00,
 	TimerValue   = 0x04,
@@ -36,7 +36,7 @@ enum
 
 enum
 {
-	LCD_BASE  = 0x911f0000,
+	LCD_BASE  = 0xA11f0000,
 	VRAM_ADDR = 0x18000000,
 
 	LCDTiming0 = 0x000,
@@ -49,7 +49,7 @@ enum
 
 enum
 {
-	RTC_BASE = 0x91170000,
+	RTC_BASE = 0xA1170000,
 
 	RTCDR   = 0x000,
 	RTCMR   = 0x004,
@@ -67,8 +67,8 @@ enum
 enum
 {
 	// we need to use mapped address
-	UART0_BASE = (0x91090000),
- 
+	UART0_BASE = (0xA1090000),
+
     // The offsets for each register for the UART.
     UART0_DR     = (UART0_BASE + 0x00),
     UART0_RSRECR = (UART0_BASE + 0x04),

@@ -13,6 +13,15 @@
 #include <windows.h>
 #include <oemglobal.h>
 
+/*
+    Global:  g_pExtensionRAMStart, g_dwExtensionRAMSize
+
+    Global variables which specify the start and size of Extension RAM
+    available in the system. It can be fixed in config.bib via FIXUPVAR.
+ */
+const volatile DWORD g_pExtensionRAMStart = 0;
+const volatile DWORD g_dwExtensionRAMSize = 0;
+
 // ---------------------------------------------------------------------------
 // OEMGetOEMRamTable: OPTIONAL
 //
@@ -41,7 +50,7 @@ BOOL OEMGetExtensionDRAM(LPDWORD lpMemStart, LPDWORD lpMemLen)
 	DEBUGMSG(1, (TEXT("OEMGetExtensionDRAM\r\n")));
 
   // False indicates no extension DRAM is present, which is a valid state.
-  return FALSE; 
+  return FALSE;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,7 +66,7 @@ DWORD OEMEnumExtensionDRAM(PMEMORY_SECTION pMemSections, DWORD dwMemSections)
   // Fill in extension DRAM code here.
 	DEBUGMSG(1, (TEXT("EnumExtensionDRAM\r\n")));
 
-  return 0; 
+  return 0;
 }
 
 // ---------------------------------------------------------------------------

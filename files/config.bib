@@ -49,12 +49,12 @@ MEMORY
 ; allocations starting at physical address 0x08100000,
 ; which is where the code portion ends.
     ;RAM       08100000  07F00000  RAM
-; 256MB
+
     NK        80000000  08000000  RAMIMAGE ; 128MB
-    RAM       88000000  08000000  RAM      ; 128MB
+; 256MB
+    ;RAM       88000000  08000000  RAM      ; 128MB
 ; 512MB
-    ;NK        80000000  08000000  RAMIMAGE ; 128MB
-    ;RAM       88000000  18000000  RAM      ; 384MB
+    RAM       88000000  18000000  RAM      ; 384MB
 
 IF IMGMPENABLE
     nk.exe:fOalMpEnable        00000000          1       FIXUPVAR

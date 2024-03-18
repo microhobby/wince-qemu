@@ -25,6 +25,7 @@
         "pkfuncs.h": "c",
         "ceddk.h": "c",
         "mmio.h": "c",
-        "*.err": "log"
+        "*.err": "log",
+        "istream": "cpp"
     }
 }

@@ -53,8 +53,8 @@ static UINT8 ChkSum(UINT8 *pBuffer, UINT16 length)
 enum
 {
 	// we need to use mapped address
-	UART0_BASE = (0x910b0000),
- 
+	UART0_BASE = (0xA10b0000),
+
     // The offsets for each register for the UART.
     UART0_DR     = (UART0_BASE + 0x00),
     UART0_RSRECR = (UART0_BASE + 0x04),
@@ -155,7 +155,7 @@ static BOOL SerialEncode(UINT8 *pFrame, UINT16 size)
 static UINT8* SerialDecode(UINT8 *pFrame, UINT16 *pSize)
 {
     UINT8 *pData;
-    
+
     *pSize -= sizeof(OAL_KITL_SERIAL_HEADER);
     pData = pFrame + sizeof(OAL_KITL_SERIAL_HEADER);
     return pData;
@@ -216,7 +216,7 @@ BOOL OEMKitlInit(PKITLTRANSPORT pKitl)
 
 	// 8 bit data transmission (1 stop bit, no parity).
 	mmio_write(UART0_LCRH, (1 << 5) | (1 << 6));
- 
+
 	// Enable UART0, receive & transfer part of UART.
 	mmio_write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));
 
