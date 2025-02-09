@@ -1,6 +1,7 @@
 !if 0
 Copyright (c) Microsoft Corporation.  All rights reserved.
 !endif
+
 !if 0
 Use of this sample source code is subject to the terms of the Microsoft
 license agreement under which you licensed this sample source code. If
@@ -10,6 +11,7 @@ please see the license agreement between you and Microsoft or, if applicable,
 see the LICENSE.RTF on your install media or the root of your tools installation.
 THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
 !endif
+
 # The CESYSGEN conditions below correspond to operating system
 # components, and should match the conditions in platform.bib.
 #
@@ -23,12 +25,11 @@ THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
 # public\CEBase\oak\misc.  In this case, SYSGEN_DEVICE=1 will lead
 # to CE_MODULES_DEVICE being set.
 #
-DIRS= \
-# @CESYSGEN IF CE_MODULES_DEVICE
-    #pl050 \
-    virtio_blk \
-    pl041 \
-    pl011 \
-    virtio_tablet
+
+DIRS=\
+	virtio_blk\
+	pl011\
+	virtio_tablet
+
 # @CESYSGEN ENDIF CE_MODULES_DEVICE
 
