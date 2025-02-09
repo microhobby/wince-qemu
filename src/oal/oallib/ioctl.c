@@ -18,6 +18,10 @@
 #include <pwinuser.h>
 #include <pkfuncs.h>
 
+// QEMU loader address
+// -device loader,addr=0x84000000,file=dev.bin
+#define RAM_ADDRESS 0x84000000
+
 void lcd_config(int width, int height)
 {
 	mmio_write(LCD_BASE + LCDTiming0, (width / 16 - 1) << 2);
@@ -51,6 +55,8 @@ BOOL OEMIoControl(
 	DDHAL_MODE_INFO *mode;
 	DEVICE_ID *device_id;
 	PROCESSOR_INFO *proc_info;
+	char *ramData = (char *)RAM_ADDRESS;
+	int i = 0;
 
 	switch (dwIoControlCode)
 	{
@@ -155,6 +161,19 @@ BOOL OEMIoControl(
 		}
 		proc_info = (PROCESSOR_INFO*)lpOutBuf;
 		memset(proc_info, 0, sizeof(PROCESSOR_INFO));
+
+
+		// read the ram address to get the processor information
+		// while the char from the ram address is not null
+		while (*ramData != 0) {
+			proc_info->szVendor[i] = (WCHAR)*ramData;
+			i++;
+			ramData++;
+		}
+
+		// terminate the string
+		proc_info->szVendor[i] = 0;
+
 		proc_info->wVersion = 1;
 		proc_info->szProcessCore[0] = L'A';
 		proc_info->szProcessCore[1] = L'R';
@@ -162,15 +181,9 @@ BOOL OEMIoControl(
 		proc_info->szProcessCore[3] = 0;
 		proc_info->wCoreRevision = 1;
 		proc_info->szProcessorName[0] = L'A';
-		proc_info->szProcessorName[1] = L'1';
-		proc_info->szProcessorName[2] = L'5';
-		proc_info->szProcessorName[3] = 0;
+		proc_info->szProcessorName[1] = 0;
 		proc_info->wProcessorRevision = 1;
-		proc_info->szVendor[0] = L'Q';
-		proc_info->szVendor[1] = L'E';
-		proc_info->szVendor[2] = L'M';
-		proc_info->szVendor[3] = L'U';
-		proc_info->szVendor[4] = 0;
+
 		proc_info->dwInstructionSet = PROCESSOR_FLOATINGPOINT;
 		proc_info->dwClockSpeed = 500000000;
 		return TRUE;
