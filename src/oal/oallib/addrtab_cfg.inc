@@ -36,12 +36,12 @@
 
 g_oalAddressTable
 	DCD     CE_NEW_MAPPING_TABLE, g_oalDeviceTable, 0
-        DCD     0x80000000, 0x80000000, 512    ; main RAM
+        DCD     0x80000000, 0x80000000, 256    ; main RAM
         DCD     0, 0, 0 ; end of table
 
 g_oalDeviceTable
-	DCD     0xA1000000, 0x001C0000, 0x400000, 0 ; periph
-	DCD     0xA2000000, 0x002C0000, 0x10000, 0 ; GIC
+	DCD     0x91000000, 0x001C0000, 0x400000, 0 ; periph
+	DCD     0x92000000, 0x002C0000, 0x10000, 0 ; GIC
 	DCD     0, 0, 0, 0 ; end of table
 
 ;------------------------------------------------------------------------------

@@ -29,26 +29,26 @@
 [HKEY_LOCAL_MACHINE\Drivers\BuiltIn\pl011]
     "Dll"="pl011.dll"
     "IClass"="{CC5195AC-BA49-48a0-BE17-DF6D1B0173DD}"
-    "IoBase"=dword:a10a0000
+    "IoBase"=dword:910a0000
     "SysIntr"=dword:17
     "Prefix"="COM"
 
 [HKEY_LOCAL_MACHINE\Drivers\BuiltIn\pl050]
     "Dll"="pl050.dll"
     "IClass"="{CBE6DDF2-F5D4-4e16-9F61-4CCC0B6695F3}"
-    "IoBase"=dword:a1060000
+    "IoBase"=dword:91060000
     "Prefix"="KBD"
 
 [HKEY_LOCAL_MACHINE\Drivers\BuiltIn\pl041]
     "Dll"="pl041.dll"
     "IClass"="{E92BC203-8354-4043-A06F-2A170BF6F227}"
-    "IoBase"=dword:a1040000
+    "IoBase"=dword:91040000
     "SysIntr"=dword:1A
     "Prefix"="WAV"
 
 [HKEY_LOCAL_MACHINE\Drivers\BuiltIn\pl050\Keybd]
     "SysIntr"=dword:10
-    "Priority256"=dword:a1
+    "Priority256"=dword:91
     "Timeout"=dword:1c2
 
 [HKEY_LOCAL_MACHINE\Drivers\BuiltIn\pl050\Mouse]
@@ -58,7 +58,7 @@
 [HKEY_LOCAL_MACHINE\Drivers\BuiltIn\virtio_blk]
     "Dll"="virtio_blk.dll"
     "IClass"="{A4E7EDDA-E575-4252-9D6B-4195D48BB865}"
-    "IoBase"=dword:a1130400
+    "IoBase"=dword:91130400
     "Prefix"="DSK"
     "SysIntr"=dword:14
 

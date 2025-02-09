@@ -219,7 +219,7 @@ struct virtio_cfg cfginst;
 
 BOOL init(void)
 {
-	cfginst.ioBase = 0xA1130600;
+	cfginst.ioBase = 0x91130600;
 	cfginst.sysintr = 0x15;
 	return InitVirtioInput(&cfginst);
 }
