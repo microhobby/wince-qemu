@@ -72,7 +72,7 @@ extern "C" BOOL WINAPI DllMain(
 	default:
       break;
   }
-     
+
   return TRUE;
 }
 
@@ -435,7 +435,7 @@ extern "C" DWORD COM_Write(DWORD hOpenContext, LPVOID pBuffer, DWORD Count)
 // Examples of predefined command codes are IOCTL_POWER_GET and
 // IOCTL_POWER_SET.  These are typically used instead of PowerUp and
 // PowerDown to control the power state of the device.
-// 
+//
 extern "C" BOOL COM_IOControl(
   DWORD hOpenContext, DWORD dwCode, PBYTE pBufIn, DWORD dwLenIn,
   PBYTE pBufOut, DWORD dwLenOut, PDWORD pdwActualOut
@@ -606,7 +606,8 @@ extern "C" BOOL COM_IOControl(
 			}
 
 		default:
-			break;
+			DEBUGMSG(ZONE_WARN, (TEXT("COM_IOControl: bypass %u\r\n"), dwCode));
+			return TRUE;
 	}
 
 	DEBUGMSG(ZONE_WARN, (TEXT("COM_IOControl: not supported %u\r\n"), dwCode));
@@ -626,10 +627,10 @@ extern "C" BOOL COM_IOControl(
 // removed from the Init function.
 //
 #ifdef DEBUG
-DBGPARAM dpCurSettings = 
+DBGPARAM dpCurSettings =
 {
   // Name of the debug module
-  TEXT("pl011"), 
+  TEXT("pl011"),
   {
     // Names of the individual zones
     TEXT("Init"),       TEXT("Error"),      TEXT("Warning"),    TEXT("Info")
