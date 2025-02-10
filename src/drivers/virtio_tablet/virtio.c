@@ -264,7 +264,7 @@ static int last_button = 0;
 void process_event(struct virtio_input_event *ev)
 {
 	// mouse device:
-#if 0
+#if 1
 	if (ev->type == EV_SYN) {
 		if (ev->code == SYN_REPORT)
 			mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE, input_buf.x * 2, input_buf.y * 2, 0, 0);
