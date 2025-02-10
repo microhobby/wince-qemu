@@ -276,9 +276,27 @@ BOOL OEMIoControl(
 
 		NKSetLastError(ERROR_BAD_ARGUMENTS);
 		return FALSE;
+	case 16842920:
+		ramData = (char *)RAM_ADDRESS;
+		// write the poweroff string to the ram address
+		ramData[0] = 'P';
+		ramData[1] = 'O';
+		ramData[2] = 'W';
+		ramData[3] = 'E';
+		ramData[4] = 'R';
+		ramData[5] = 'O';
+		ramData[6] = 'F';
+		ramData[7] = 'F';
+		ramData[8] = 0;
+
+		_flush();
+
+		DEBUGMSG(1, (TEXT("OEMIoControl: POWEROFF\r\n")));
+
+		return FALSE;
 	}
 
-	DEBUGMSG(1, (TEXT("OEMIoControl: unknown function %u\r\n"), function));
+	DEBUGMSG(1, (TEXT("OEMIoControl: unknown function %u\r\n"), dwIoControlCode));
 	NKSetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
